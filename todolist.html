@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JavaScript To-Do Uygulaması</title>
+    <style>
+        /* CSS Başlangıcı */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #74ebd5, #9face6);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding-top: 50px;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 25px;
+            font-size: 2em;
+        }
+
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        #taskInput {
+            flex-grow: 1;
+            padding: 12px 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px 0 0 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        #taskInput:focus {
+            border-color: #74ebd5;
+            outline: none;
+        }
+
+        #addButton {
+            background-color: #74ebd5;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+
+        #addButton:hover {
+            background-color: #61c4b2;
+        }
+
+        #addButton:active {
+            transform: scale(0.98);
+        }
+
+        #taskList {
+            list-style: none;
+            padding: 0;
+        }
+
+        #taskList li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 5px solid #9face6;
+            transition: background 0.3s;
+        }
+
+        #taskList li.completed {
+            background: #e6ffe6;
+            border-left: 5px solid #6cbe6c;
+        }
+
+        #taskList li span {
+            flex-grow: 1;
+            cursor: pointer;
+            font-size: 17px;
+        }
+
+        #taskList li.completed span {
+            text-decoration: line-through;
+            color: #777;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ff6b6b;
+            cursor: pointer;
+            font-size: 20px;
+            margin-left: 15px;
+            transition: color 0.3s;
+        }
+
+        .delete-btn:hover {
+            color: #e63946;
+        }
+        /* CSS Sonu */
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Görev Listesi 📋</h1>
+
+        <div class="input-group">
+            <input type="text" id="taskInput" placeholder="Yeni görev ekle...">
+            <button id="addButton">Ekle</button>
+        </div>
+
+        <ul id="taskList">
+            </ul>
+    </div>
+
+    <script>
+        // JavaScript Başlangıcı
+        const taskInput = document.getElementById('taskInput');
+        const addButton = document.getElementById('addButton');
+        const taskList = document.getElementById('taskList');
+
+        // Yerel depolamadan görevleri yükle
+        document.addEventListener('DOMContentLoaded', loadTasks);
+
+        // Olay dinleyicileri
+        addButton.addEventListener('click', addTask);
+        taskInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                addTask();
+            }
+        });
+        taskList.addEventListener('click', handleTaskClick);
+
+        /**
+         * Yeni görev ekler.
+         */
+        function addTask() {
+            const taskText = taskInput.value.trim();
+
+            if (taskText === '') {
+                alert('Lütfen bir görev giriniz!');
+                return;
+            }
+
+            const task = {
+                text: taskText,
+                completed: false
+            };
+
+            createTaskElement(task);
+            saveTask(task);
+            taskInput.value = ''; // Giriş alanını temizle
+        }
+
+        /**
+         * Görev listesi öğesini (<li>) oluşturur ve listeye ekler.
+         * @param {object} task - Görev nesnesi {text: string, completed: boolean}
+         */
+        function createTaskElement(task) {
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `
+                <span>${task.text}</span>
+                <button class="delete-btn">×</button>
+            `;
+
+            if (task.completed) {
+                listItem.classList.add('completed');
+            }
+
+            // Oluşturulan listeye bir veri özniteliği ile görevin metnini ekliyoruz
+            // Bu, silme ve tamamlama işlemlerinde hangi görevi güncelleyeceğimizi bulmamızı sağlar.
+            listItem.dataset.taskText = task.text;
+
+            taskList.appendChild(listItem);
+        }
+
+        /**
+         * Görev tamamlama veya silme işlemlerini yönetir.
+         * @param {Event} e - Tıklama olayı
+         */
+        function handleTaskClick(e) {
+            const listItem = e.target.closest('li');
+            if (!listItem) return;
+
+            const taskText = listItem.dataset.taskText;
+            
+            if (e.target.tagName === 'SPAN') {
+                // Tamamlama/Geri alma
+                listItem.classList.toggle('completed');
+                updateTaskStatus(taskText, listItem.classList.contains('completed'));
+
+            } else if (e.target.classList.contains('delete-btn')) {
+                // Silme
+                deleteTask(taskText);
+                listItem.remove();
+            }
+        }
+
+        /**
+         * Görevleri yerel depolamaya kaydeder.
+         * @param {object} newTask - Eklenecek görev nesnesi
+         */
+        function saveTask(newTask) {
+            const tasks = getTasksFromStorage();
+            tasks.push(newTask);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        /**
+         * Görev durumunu (tamamlandı/tamamlanmadı) yerel depolamada günceller.
+         * @param {string} text - Görev metni
+         * @param {boolean} isCompleted - Yeni durum
+         */
+        function updateTaskStatus(text, isCompleted) {
+            let tasks = getTasksFromStorage();
+            tasks = tasks.map(task => 
+                task.text === text ? { ...task, completed: isCompleted } : task
+            );
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        /**
+         * Görevi yerel depolamadan siler.
+         * @param {string} text - Silinecek görev metni
+         */
+        function deleteTask(text) {
+            let tasks = getTasksFromStorage();
+            tasks = tasks.filter(task => task.text !== text);
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        /**
+         * Yerel depolamadan görev listesini alır.
+         * @returns {Array<object>} - Görev dizisi
+         */
+        function getTasksFromStorage() {
+            const storedTasks = localStorage.getItem('tasks');
+            return storedTasks ? JSON.parse(storedTasks) : [];
+        }
+
+        /**
+         * Sayfa yüklendiğinde görevleri ekrana basar.
+         */
+        function loadTasks() {
+            const tasks = getTasksFromStorage();
+            tasks.forEach(task => createTaskElement(task));
+        }
+        // JavaScript Sonu
+    </script>
+
+</body>
+</html>
